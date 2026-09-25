@@ -4,4 +4,5 @@
 .audit-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:35px}.audit-grid>div{background:var(--panel);padding:20px}.audit-grid strong{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}.audit-grid p{font-size:13px;color:var(--muted);line-height:1.55;margin:10px 0 0}
 @media(max-width:850px){.audit-grid{grid-template-columns:1fr}}
 .model-other{background:#9c98b8}.chart-tooltip{max-width:330px}td:nth-child(2),td:nth-child(3),td:nth-child(4),td:nth-child(5),td:nth-child(6){font-variant-numeric:tabular-nums}td:nth-child(6){font-weight:700;color:var(--ink)}
+.model-6sol{background:#b59bfa}
 .finding-caveat{color:var(--muted);font-size:13px;line-height:1.55;margin:22px 0 0}.method-summary{color:var(--muted);font-size:15px;line-height:1.65;max-width:890px;margin:24px 0 0}.method details{margin-top:18px;color:var(--muted);font-size:13px;line-height:1.6}.method summary{cursor:pointer;color:var(--gold);font-weight:700}.method details p{max-width:900px;margin:10px 0 0}.method .source-line{margin-top:26px}

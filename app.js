@@ -6,8 +6,8 @@
     return;
   }
 
-  const modelNames = {"gpt-5.5":"GPT-5.5","gpt-5.6-sol":"Sol","gpt-5.6-luna":"Luna","gpt-6-astra":"Astra","codex-auto-review":"Auto review"};
-  const colors = {"gpt-5.5":"#f4be63","gpt-5.6-sol":"#74b9d2","gpt-6-astra":"#f08675","gpt-5.6-luna":"#acd59f","codex-auto-review":"#9c98b8"};
+  const modelNames = {"gpt-5.5":"GPT-5.5","gpt-5.6-sol":"GPT-5.6 Sol","gpt-5.6-luna":"Luna","gpt-6-astra":"Astra","gpt-6-sol":"GPT-6 Sol","codex-auto-review":"Auto review"};
+  const colors = {"gpt-5.5":"#f4be63","gpt-5.6-sol":"#74b9d2","gpt-6-astra":"#f08675","gpt-6-sol":"#b59bfa","gpt-5.6-luna":"#acd59f","codex-auto-review":"#9c98b8"};
   const records = report.records.map((row, index) => {
     const dominant = Object.entries(row.modelTokens).sort((a,b) => b[1]-a[1])[0]?.[0] || "unknown";
     return {...row, index, dominant, timestamp: Date.parse(row.lastReadingAt), priceComplete: row.unpricedModels.length === 0};
@@ -18,11 +18,13 @@
   const median = values => { const sorted = values.slice().sort((a,b)=>a-b); return sorted.length ? (sorted[Math.floor((sorted.length-1)/2)] + sorted[Math.floor(sorted.length/2)])/2 : NaN; };
   const dayLabel = row => row.date.slice(5).replace("-", "/") + " " + row.time;
   const mix = row => Object.entries(row.modelTokens).sort((a,b)=>b[1]-a[1]).map(([name,tokens]) => ({name, tokens, percent: 100*tokens/row.totalTokens}));
-  const category = row => row.observedFull ? "Observed" : "Extrapolated";
+  const category = row => row.preview ? "Preview · extrapolated" : row.observedFull ? "Observed" : "Extrapolated";
   const quality = row => row.priceQuality === "partial" ? "Partial price" : row.priceQuality === "historical-inferred" ? "Historical inference" : "Dated ledger";
+  const preview = records.find(row => row.preview);
+  document.getElementById("preview-note").textContent = preview ? `The ${preview.date} GPT-6 Sol preview reached ${preview.maxPercent}% at ${preview.time}; its projection is less certain than near-full windows.` : "";
 
   const headline = document.getElementById("headline-stats");
-  [[records.length,"windows ≥80%"],[records.filter(r=>r.observedFull).length,"observed 100%"],[new Set(records.map(r=>r.date)).size,"calendar days"]].forEach(([number,label]) => {
+  [[records.filter(r=>!r.preview).length,"windows ≥80%"],[records.filter(r=>r.preview).length,"preview window"],[records.filter(r=>r.observedFull).length,"observed 100%"]].forEach(([number,label]) => {
     const wrap=document.createElement("div"),strong=document.createElement("strong"),span=document.createElement("span");
     strong.textContent=number;span.textContent=label;wrap.append(strong,span);headline.append(wrap);
   });
@@ -63,7 +65,7 @@
     const ctx=canvas.getContext("2d");ctx.scale(dpr,dpr);
     const box={left:58,right:width-20,top:22,bottom:height-43};
     const minX=type==="timeline" ? Math.min(...records.map(r=>r.timestamp)) : 0;
-    const maxX=type==="timeline" ? Math.max(...records.map(r=>r.timestamp)) : 35_000_000;
+    const maxX=type==="timeline" ? Math.max(...records.map(r=>r.timestamp)) : Math.ceil(Math.max(...records.map(r=>r.totalTokens*100/r.maxPercent))/5_000_000)*5_000_000;
     const minY=0,maxY=type==="timeline" ? 25 : 25;
     const X=x=>box.left+(x-minX)/(maxX-minX)*(box.right-box.left);
     const Y=y=>box.bottom-(y-minY)/(maxY-minY)*(box.bottom-box.top);
@@ -74,12 +76,12 @@
       ["2026-07-01","2026-08-01","2026-09-01","2026-09-23"].forEach(date=>{const xx=X(Date.parse(date+"T12:00:00Z"));if(xx<box.left||xx>box.right)return;ctx.fillStyle="#a6afba";ctx.fillText(date.slice(5),xx,box.bottom+11);});
       const change=X(Date.parse("2026-09-23T00:00:00Z"));ctx.setLineDash([5,5]);ctx.strokeStyle="#e9968480";ctx.beginPath();ctx.moveTo(change,box.top);ctx.lineTo(change,box.bottom);ctx.stroke();ctx.setLineDash([]);
     } else {
-      [0,5,10,15,20,25,30,35].forEach(value=>{const xx=X(value*1_000_000);ctx.fillStyle="#a6afba";ctx.fillText(value+"M",xx,box.bottom+11);});
+      for(let value=0;value<=maxX/1_000_000;value+=5){const xx=X(value*1_000_000);ctx.fillStyle="#a6afba";ctx.fillText(value+"M",xx,box.bottom+11);}
     }
     const points=[];
     rows.forEach(row=>{
       const xx=X(type==="timeline"?row.timestamp:row.totalTokens*100/row.maxPercent), yy=Y(row.fullWindowUsd);
-      const radius=row.observedFull?5:5.5;ctx.beginPath();ctx.arc(xx,yy,radius,0,Math.PI*2);ctx.lineWidth=2;ctx.strokeStyle=colors[row.dominant]||"#ddd";ctx.fillStyle=row.observedFull?(colors[row.dominant]||"#ddd"):"#1c222d";ctx.fill();ctx.stroke();points.push({x:xx,y:yy,row});
+      const radius=row.preview?7:row.observedFull?5:5.5;ctx.beginPath();ctx.arc(xx,yy,radius,0,Math.PI*2);ctx.lineWidth=2;ctx.strokeStyle=colors[row.dominant]||"#ddd";ctx.fillStyle=row.observedFull?(colors[row.dominant]||"#ddd"):"#1c222d";ctx.fill();ctx.stroke();points.push({x:xx,y:yy,row});
     });
     chartState.set(canvas,{points});
   }
@@ -110,7 +112,7 @@
       const rect=canvas.getBoundingClientRect();const x=event.clientX-rect.left,y=event.clientY-rect.top;
       const nearest=(chartState.get(canvas)?.points||[]).map(p=>({...p,d:Math.hypot(p.x-x,p.y-y)})).sort((a,b)=>a.d-b.d)[0];
       if(!nearest||nearest.d>13){tooltip.hidden=true;return;}
-      const r=nearest.row;tooltip.textContent=`${r.date} ${r.time} · ${r.maxPercent.toFixed(0)}% used · ${tokenCount(r.totalTokens*100/r.maxPercent)} tokens/100% · ${money(r.fullWindowUsd)} USD/100% · ${modelNames[r.dominant]||r.dominant}${r.observedFull?" · observed":" · extrapolated"}${r.priceComplete?"":" · partial price"}`;
+      const r=nearest.row;tooltip.textContent=`${r.date} ${r.time} · ${r.maxPercent.toFixed(0)}% used · ${tokenCount(r.totalTokens*100/r.maxPercent)} tokens/100% · ${money(r.fullWindowUsd)} USD/100% · ${modelNames[r.dominant]||r.dominant} · ${category(r)}${r.priceComplete?"":" · partial price"}`;
       tooltip.hidden=false;tooltip.style.left=Math.max(8,Math.min(x+16,rect.width-220))+"px";tooltip.style.top=Math.max(10,y-55)+"px";
     });
     canvas.addEventListener("mouseleave",()=>tooltip.hidden=true);
@@ -124,7 +126,7 @@
     const nearest=state.points.reduce((a,b)=>Math.abs(b.x-x)<Math.abs(a.x-x)?b:a);
     if(Math.abs(nearest.x-x)>Math.max(7,nearest.slot*.48)||y<state.box.top||y>state.box.bottom){tooltip.hidden=true;return;}
     const row=nearest.row,parts=mix(row).map(part=>`${modelNames[part.name]||part.name} ${tokenCount(part.tokens)} (${part.percent.toFixed(1)}%)`).join(" · ");
-    tooltip.textContent=`${row.date} ${row.time} · ${row.maxPercent.toFixed(0)}% used · ${tokenCount(row.totalTokens)} recorded · ${tokenCount(row.totalTokens*100/row.maxPercent)} per 100% · ${parts}${row.observedFull?" · observed":" · extrapolated"}`;
+    tooltip.textContent=`${row.date} ${row.time} · ${row.maxPercent.toFixed(0)}% used · ${tokenCount(row.totalTokens)} recorded · ${tokenCount(row.totalTokens*100/row.maxPercent)} per 100% · ${parts} · ${category(row)}`;
     tooltip.hidden=false;tooltip.style.left=Math.max(8,Math.min(x+16,rect.width-220))+"px";tooltip.style.top=Math.max(10,y-70)+"px";
   });
   document.getElementById("tokens-chart").addEventListener("mouseleave",()=>document.getElementById("tokens-tooltip").hidden=true);
@@ -133,11 +135,11 @@
   filters.forEach(el=>el.addEventListener("change",render));
   let resizeTimer;window.addEventListener("resize",()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(render,90);});
   document.getElementById("download-csv").addEventListener("click",()=>{
-    const models=["gpt-5.5","gpt-5.6-sol","gpt-5.6-luna","gpt-6-astra","codex-auto-review"];
-    const header=["date","time_uk","minimum_usage_percent","max_usage_percent","snapshot_count","recorded_usd","usd_per_100_percent","observed_full","extrapolated","price_quality","total_tokens","tokens_per_100_percent"];
+    const models=["gpt-5.5","gpt-5.6-sol","gpt-5.6-luna","gpt-6-astra","gpt-6-sol","codex-auto-review"];
+    const header=["date","time_uk","minimum_usage_percent","max_usage_percent","snapshot_count","recorded_usd","usd_per_100_percent","observed_full","extrapolated","preview","price_quality","total_tokens","tokens_per_100_percent"];
     models.forEach(model=>{const key=model.replaceAll("-","_");header.push(key+"_tokens",key+"_tokens_per_100_percent",key+"_token_share");});
     const csv=[header.join(",")];for(const r of selected()){
-      const row=[r.date,r.time,r.minPercent,r.maxPercent,r.snapshotCount,r.recordedUsd,r.fullWindowUsd,r.observedFull,!r.observedFull,r.priceQuality,r.totalTokens,r.totalTokens*100/r.maxPercent];
+      const row=[r.date,r.time,r.minPercent,r.maxPercent,r.snapshotCount,r.recordedUsd,r.fullWindowUsd,r.observedFull,!r.observedFull,Boolean(r.preview),r.priceQuality,r.totalTokens,r.totalTokens*100/r.maxPercent];
       models.forEach(model=>{const tokens=r.modelTokens[model]||0;row.push(tokens,tokens*100/r.maxPercent,r.totalTokens?tokens/r.totalTokens:0);});csv.push(row.join(","));
     }
     const blob=new Blob([csv.join("\n")+"\n"],{type:"text/csv;charset=utf-8"});const url=URL.createObjectURL(blob);const link=document.createElement("a");link.href=url;link.download="codex-five-hour-windows.csv";link.click();setTimeout(()=>URL.revokeObjectURL(url),2000);

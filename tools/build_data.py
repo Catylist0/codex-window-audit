@@ -69,11 +69,13 @@ for (limit_id, reset), samples in sorted(WINDOWS.items(), key=lambda pair: pair[
 ROWS = []
 for group in GROUPS:
     max_percent = max(percent for _, percent in group['samples'])
-    if max_percent < 80:
-        continue
     end = max(timestamp for timestamp, _ in group['samples'])
     start = dt.datetime.fromtimestamp(group['reset'] - 18000, dt.timezone.utc)
     events = [event for event in EVENTS if start <= event[0] <= end]
+    preview = (end.astimezone(TZ).date() == dt.date(2026, 9, 25)
+               and max_percent < 80 and any(event[1] == 'gpt-6-sol' for event in events))
+    if max_percent < 80 and not preview:
+        continue
     tokens = collections.Counter()
     dollars = collections.Counter()
     unknown = collections.Counter()
@@ -94,7 +96,8 @@ for group in GROUPS:
         'unknown': dict(unknown), 'inferred': inferred, 'dollars': dict(dollars),
         'modelTokens': dict(tokens), 'minPercent': min(percent for _, percent in group['samples']),
         'snapshotCount': len(group['samples']), 'firstReadingAt': min(timestamp for timestamp, _ in group['samples']).isoformat(),
-        'lastReadingAt': end.isoformat(), 'resetAt': dt.datetime.fromtimestamp(group['reset'], dt.timezone.utc).isoformat()})
+        'lastReadingAt': end.isoformat(), 'resetAt': dt.datetime.fromtimestamp(group['reset'], dt.timezone.utc).isoformat(),
+        'preview': preview})
 
 if __name__ == '__main__':
     output = pathlib.Path(__file__).resolve().parent.parent / 'data.js'
@@ -104,6 +107,7 @@ if __name__ == '__main__':
             'date': row['date'], 'time': row['end'], 'firstReadingAt': row['firstReadingAt'],
             'lastReadingAt': row['lastReadingAt'], 'resetAt': row['resetAt'],
             'maxPercent': row['percent'], 'minPercent': row['minPercent'], 'snapshotCount': row['snapshotCount'],
+            'preview': row['preview'],
             'recordedUsd': round(row['cost'], 6),
             'fullWindowUsd': round(row['cost'] / (row['percent'] / 100), 6),
             'observedFull': row['percent'] >= 100, 'priceQuality': 'partial' if row['unknown'] else ('historical-inferred' if row['inferred'] else 'dated-ledger'),
@@ -111,7 +115,7 @@ if __name__ == '__main__':
             'modelTokens': row['modelTokens'], 'modelUsd': {key: round(value, 6) for key, value in row['dollars'].items()},
         })
     report = {'generatedAt': dt.datetime.now(dt.timezone.utc).isoformat(), 'timeZone': 'Europe/London',
-              'definition': 'Native Codex primary 300-minute rate-limit readings; windows with maximum used_percent >= 80',
+              'definition': 'Native Codex primary 300-minute rate-limit readings; windows with maximum used_percent >= 80, plus a 25 September GPT-6 Sol preview',
               'records': records}
     output.write_text('window.REPORT = ' + json.dumps(report, separators=(',', ':')) + ';\n')
     print(f'Wrote {len(records)} aggregate windows to {output}')

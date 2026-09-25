@@ -6,14 +6,14 @@
   <meta name="theme-color" content="#11141b">
   <meta name="description" content="An independent audit of Codex five-hour usage windows and API-equivalent cost estimates.">
   <title>Codex window audit</title>
-  <link rel="stylesheet" href="style.css?v=2">
-  <script defer src="data.js?v=2"></script>
-  <script defer src="app.js?v=2"></script>
+  <link rel="stylesheet" href="style.css?v=3">
+  <script defer src="data.js?v=3"></script>
+  <script defer src="app.js?v=3"></script>
 </head>
 <body>
   <div class="shell">
     <header class="masthead">
-      <div class="eyebrow">Independent usage audit <span class="dot">·</span> 28 June–24 September 2026</div>
+      <div class="eyebrow">Independent usage audit <span class="dot">·</span> 28 June–25 September 2026</div>
       <h1>What does a five-hour<br><em>Codex window</em> cost?</h1>
       <p class="lede">Local Codex logs report how much of each five-hour allowance was used. We paired those readings with token counts and dated standard API prices to compare the dollar-equivalent usage across windows and models.</p>
       <div class="headline-stats" id="headline-stats" aria-label="Key figures"></div>
@@ -44,6 +44,7 @@
         </label>
         <label>Peak usage
           <select id="peak-filter">
+            <option value="0">All, including 25 Sep preview</option>
             <option value="80">80% or more</option>
             <option value="85">85% or more</option>
             <option value="90">90% or more</option>
@@ -55,6 +56,7 @@
             <option value="gpt-5.5">GPT-5.5</option>
             <option value="gpt-5.6-sol">GPT-5.6 Sol</option>
             <option value="gpt-6-astra">GPT-6 Astra</option>
+            <option value="gpt-6-sol">GPT-6 Sol</option>
           </select>
         </label>
         <label>Price quality
@@ -74,14 +76,14 @@
         </div>
         <p class="chart-note">One point per window. Hollow points project the observed amount to 100%; colour shows the dominant model.</p>
         <div class="chart-wrap"><canvas id="timeline-chart" role="img" aria-label="Time series of API-equivalent dollars per full five-hour Codex window, coloured by dominant model"></canvas><div class="chart-tooltip" id="timeline-tooltip" hidden></div></div>
-        <div class="model-legend"><span><i class="swatch model-55"></i>GPT-5.5</span><span><i class="swatch model-sol"></i>GPT-5.6 Sol</span><span><i class="swatch model-astra"></i>GPT-6 Astra</span></div>
+        <div class="model-legend"><span><i class="swatch model-55"></i>GPT-5.5</span><span><i class="swatch model-sol"></i>GPT-5.6 Sol</span><span><i class="swatch model-astra"></i>GPT-6 Astra</span><span><i class="swatch model-6sol"></i>GPT-6 Sol</span></div>
       </section>
 
       <section class="chart-section" aria-labelledby="tokens-title">
         <div class="section-heading"><div><div class="section-kicker">02 / Tokens</div><h2 id="tokens-title">Tokens per five-hour window</h2></div><div class="legend"><span class="legend-item"><i class="legend-mark observed"></i>Observed 100%</span><span class="legend-item"><i class="legend-mark extrapolated"></i>Extrapolated</span></div></div>
         <p class="chart-note">Stacks show each model’s tokens scaled to 100% of the window. Outlined columns are extrapolated.</p>
         <div class="chart-wrap"><canvas id="tokens-chart" role="img" aria-label="Stacked columns of tokens per full five-hour window broken down by model"></canvas><div class="chart-tooltip" id="tokens-tooltip" hidden></div></div>
-        <div class="model-legend"><span><i class="swatch model-55"></i>GPT-5.5</span><span><i class="swatch model-sol"></i>GPT-5.6 Sol</span><span><i class="swatch model-astra"></i>GPT-6 Astra</span><span><i class="swatch model-other"></i>Other</span></div>
+        <div class="model-legend"><span><i class="swatch model-55"></i>GPT-5.5</span><span><i class="swatch model-sol"></i>GPT-5.6 Sol</span><span><i class="swatch model-astra"></i>GPT-6 Astra</span><span><i class="swatch model-6sol"></i>GPT-6 Sol</span><span><i class="swatch model-other"></i>Other</span></div>
       </section>
 
       <section class="chart-section" aria-labelledby="scatter-title">
@@ -92,18 +94,18 @@
 
       <section class="table-section" aria-labelledby="records-title">
         <div class="section-heading"><div><div class="section-kicker">04 / Records</div><h2 id="records-title">Every qualifying window</h2></div><button id="download-csv" type="button">Download filtered CSV ↓</button></div>
-        <p class="chart-note">Full-window values are extrapolated below 100%. Partial prices are lower bounds. Times use Europe/London.</p>
+        <p class="chart-note">Full-window values are extrapolated below 100%. <span id="preview-note"></span> Partial prices are lower bounds. Times use Europe/London.</p>
         <div class="table-scroll"><table><thead><tr><th>Date &amp; last reading</th><th>Peak</th><th>Tokens</th><th>Tokens / 100%</th><th>Recorded USD</th><th>USD / 100%</th><th>Status</th><th>Model tokens</th><th>Price quality</th></tr></thead><tbody id="records-body"></tbody></table></div>
       </section>
 
       <section class="method" aria-labelledby="method-title">
         <div class="section-kicker">Method &amp; limits</div><h2 id="method-title">How to read this</h2>
-        <p class="method-summary">Windows are grouped by five-hour reset time; only those reaching 80% are shown. Full-window values divide recorded tokens and dollars by the reported usage fraction. That assumes linear use beyond the last reading. Dollars use dated standard API token prices, not subscription charges.</p>
+        <p class="method-summary">Windows are grouped by five-hour reset time; those reaching 80% are shown, plus one 25 Sep preview. Full-window values divide recorded tokens and dollars by the reported usage fraction. That assumes linear use beyond the last reading. Dollars use dated standard API token prices, not subscription charges.</p>
         <details><summary>More on sources and uncertainty</summary><p>Reset times within 120 seconds are merged. Native Codex token events are counted through the last limit reading; other clients may be absent. Early GPT-5.5 cache pricing is inferred, and four July windows have unpriced auto-review tokens. The data excludes prompts and transcripts. OpenAI says published credit prices alone do not determine included subscription usage.</p></details>
         <p class="source-line">Sources: <a href="https://developers.openai.com/api/docs/pricing">API prices</a> · <a href="https://learn.chatgpt.com/docs/pricing">Codex limits</a> · <a href="https://openai.com/index/introducing-gpt-5-5/">GPT-5.5 launch</a> · <a href="https://openai.com/index/gpt-5-6/">GPT-5.6 launch</a>.</p>
       </section>
     </main>
-    <footer>Codex five-hour window audit <span>·</span> Aggregated local observations through 24 September 2026</footer>
+    <footer>Codex five-hour window audit <span>·</span> Aggregated local observations through 25 September 2026</footer>
   </div>
 </body>
 </html>
