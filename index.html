@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#11141b">
+  <meta name="description" content="An independent audit of Codex five-hour usage windows and API-equivalent cost estimates.">
+  <title>Codex window audit</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="data.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="masthead">
+      <div class="eyebrow">Independent usage audit <span class="dot">·</span> 28 June–24 September 2026</div>
+      <h1>What does a five-hour<br><em>Codex window</em> cost?</h1>
+      <p class="lede">Local Codex logs report how much of each five-hour allowance was used. We paired those readings with token counts and dated standard API prices to compare the dollar-equivalent usage across windows and models.</p>
+      <div class="headline-stats" id="headline-stats" aria-label="Key figures"></div>
+    </header>
+
+    <main>
+      <section class="reading" aria-labelledby="finding-title">
+        <div class="section-kicker">The finding</div>
+        <h2 id="finding-title">A visible shift, with a model change at the same time.</h2>
+        <div class="finding-grid">
+          <div class="finding-number"><span id="sol-median">—</span><small>16 Sol dominated windows<br>USD per 100% · median</small></div>
+          <div class="finding-arrow" aria-hidden="true">→</div>
+          <div class="finding-number astra"><span id="astra-median">—</span><small>3 Astra dominated windows<br>USD per 100% · median</small></div>
+          <div class="finding-copy">
+            <p>In the high-coverage subset (peak at least 85%, minimum recorded usage at most 5%), the median standard API equivalent falls from about $15.0 to $11.2 per 100%—roughly 25%. Tokens per 100% fall from about 25.0 million to 5.6 million. This is an association, not proof of a hidden limit reduction.</p>
+            <p>All three Astra windows stopped below 100%, so their full-window dollar amounts are extrapolations. The model switch, possible model-specific allowance weighting, concurrent usage outside native logs, and a small Astra sample prevent a clean before/after causal test.</p>
+          </div>
+        </div>
+        <div class="audit-grid">
+          <div><strong>Observed</strong><p>The high-coverage Sol and Astra groups do not overlap in API-equivalent dollars per 100% in this sample. Weekly usage remained below 90%, making a weekly cap an unlikely explanation for these particular windows.</p></div>
+          <div><strong>Unresolved</strong><p>Model and date change together. OpenAI says allowance use varies with model, context, reasoning, tools, caching, and speed. Published credit rates are proportional to standard API prices for these two models, but credit prices alone do not determine included usage.</p></div>
+          <div><strong>Next check</strong><p>Collect more Astra windows, especially observed 100% windows, while keeping plan, speed, and client constant. A same-model comparison across a suspected change date would be stronger evidence of a quota change.</p></div>
+        </div>
+      </section>
+
+      <section class="controls" aria-label="Window filters">
+        <label>Window status
+          <select id="status-filter">
+            <option value="all">Observed and extrapolated</option>
+            <option value="observed">Observed 100% only</option>
+            <option value="extrapolated">Extrapolated only</option>
+          </select>
+        </label>
+        <label>Peak usage
+          <select id="peak-filter">
+            <option value="80">80% or more</option>
+            <option value="85">85% or more</option>
+            <option value="90">90% or more</option>
+          </select>
+        </label>
+        <label>Dominant model
+          <select id="model-filter">
+            <option value="all">All models</option>
+            <option value="gpt-5.5">GPT-5.5</option>
+            <option value="gpt-5.6-sol">GPT-5.6 Sol</option>
+            <option value="gpt-6-astra">GPT-6 Astra</option>
+          </select>
+        </label>
+        <label>Price quality
+          <select id="quality-filter">
+            <option value="all">All estimates</option>
+            <option value="complete">Complete priced buckets</option>
+            <option value="dated">Dated ledger only</option>
+          </select>
+        </label>
+        <div class="filter-count" id="filter-count" aria-live="polite"></div>
+      </section>
+
+      <section class="chart-section" aria-labelledby="timeline-title">
+        <div class="section-heading">
+          <div><div class="section-kicker">01 / Time</div><h2 id="timeline-title">Dollars per full window</h2></div>
+          <div class="legend"><span class="legend-item"><i class="legend-mark observed"></i>Observed 100%</span><span class="legend-item"><i class="legend-mark extrapolated"></i>Extrapolated</span></div>
+        </div>
+        <p class="chart-note">Every point is one five-hour window that reached at least 80%. Hollow points divide its recorded dollars by its highest reported usage fraction. Colour shows the dominant model.</p>
+        <div class="chart-wrap"><canvas id="timeline-chart" role="img" aria-label="Time series of API-equivalent dollars per full five-hour Codex window, coloured by dominant model"></canvas><div class="chart-tooltip" id="timeline-tooltip" hidden></div></div>
+        <div class="model-legend"><span><i class="swatch model-55"></i>GPT-5.5</span><span><i class="swatch model-sol"></i>GPT-5.6 Sol</span><span><i class="swatch model-astra"></i>GPT-6 Astra</span></div>
+      </section>
+
+      <section class="chart-section" aria-labelledby="scatter-title">
+        <div class="section-heading"><div><div class="section-kicker">02 / Relationship</div><h2 id="scatter-title">Allowance used vs dollars spent</h2></div></div>
+        <p class="chart-note">The diagonal guides mark the dollar amount implied at 100% for each point. This view shows the actual measured percentage and dollar amount, before extrapolation.</p>
+        <div class="chart-wrap"><canvas id="scatter-chart" role="img" aria-label="Scatter plot of reported five-hour allowance usage percentage against API-equivalent dollars spent"></canvas><div class="chart-tooltip" id="scatter-tooltip" hidden></div></div>
+      </section>
+
+      <section class="table-section" aria-labelledby="records-title">
+        <div class="section-heading"><div><div class="section-kicker">03 / Records</div><h2 id="records-title">Every qualifying window</h2></div><button id="download-csv" type="button">Download filtered CSV ↓</button></div>
+        <p class="chart-note">Model mix is share of recorded tokens. “Partial price” means at least one model had no defensible price for that date; its dollars are a lower bound. Times use Europe/London.</p>
+        <div class="table-scroll"><table><thead><tr><th>Date &amp; last reading</th><th>Peak</th><th>Recorded USD</th><th>USD / 100%</th><th>Status</th><th>Model mix by tokens</th><th>Price quality</th></tr></thead><tbody id="records-body"></tbody></table></div>
+      </section>
+
+      <section class="method" aria-labelledby="method-title">
+        <div class="section-kicker">Method &amp; limits</div><h2 id="method-title">What this can—and cannot—show</h2>
+        <div class="method-grid">
+          <article><h3>Window identity</h3><p>Codex token-count events carry a primary five-hour usage percentage and reset time. Readings with reset times within 120 seconds were treated as one window; this merges an overlapping July 2 split. A window qualifies if its highest recorded percentage is at least 80%.</p></article>
+          <article><h3>Cost calculation</h3><p>For each qualifying window, local Codex token events between reset minus five hours and its last reading were priced by model and token type. Reported USD sums fresh input, cached input, cache writes, and output at standard short-context API rates. Projected full-window USD divides by the reported usage fraction, assuming a linear relationship over the unobserved remainder.</p></article>
+          <article><h3>Not a billing record</h3><p>These are standard API-equivalent estimates for subscription activity, not charges paid. The logs omit activity from clients that do not write native Codex sessions. Hosted tools, long-context and fast-mode premiums, and any undocumented allowance weighting are not measured. OpenAI says credit prices alone do not determine included subscription usage.</p></article>
+          <article><h3>Historical prices</h3><p>Recent rates come from the widget’s dated price ledger. Earlier GPT-5.5 cached-input prices are inferred from the currently published rate, alongside its published launch input/output rates. Four July windows include unpriced <code>codex-auto-review</code> usage; their displayed dollars are lower bounds.</p></article>
+        </div>
+        <p class="source-line">Sources: <a href="https://developers.openai.com/api/docs/pricing">OpenAI API pricing</a> · <a href="https://learn.chatgpt.com/docs/pricing">Codex allowance and credits</a> · <a href="https://openai.com/index/introducing-gpt-5-5/">GPT-5.5 launch</a> · <a href="https://openai.com/index/gpt-5-6/">GPT-5.6 launch and update</a>. No prompts, responses, or transcript content are included in this page.</p>
+      </section>
+    </main>
+    <footer>Codex five-hour window audit <span>·</span> Aggregated local observations through 24 September 2026</footer>
+  </div>
+</body>
+</html>
